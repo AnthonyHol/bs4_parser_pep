@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import List, Tuple
 from urllib.parse import urljoin
 
 import requests_cache
@@ -7,12 +8,12 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
-from constants import BASE_DIR, MAIN_DOC_URL, PEP_URL, EXPECTED_STATUS
+from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, PEP_URL
 from outputs import control_output
 from utils import find_tag, get_response
 
 
-def whats_new(session):
+def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     whats_new_url = urljoin(MAIN_DOC_URL, "whatsnew/")
 
     response = get_response(session, whats_new_url)
@@ -27,7 +28,7 @@ def whats_new(session):
 
     sections_by_python = div_with_ul.find_all("li", attrs={"class": "toctree-l1"})
 
-    results = [("Ссылка на статью", "Заголовок", "Редактор, автор")]
+    results = [("Ссылка на статью", "Заголовок", "Редактор, Автор")]
 
     for section in tqdm(sections_by_python):
         version_a_tag = section.find("a")
@@ -47,7 +48,7 @@ def whats_new(session):
     return results
 
 
-def latest_versions(session):
+def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     response = get_response(session, MAIN_DOC_URL)
     if response is None:
         return
@@ -80,7 +81,7 @@ def latest_versions(session):
     return results
 
 
-def download(session):
+def download(session: requests_cache.CachedSession) -> None:
     response = get_response(session, urljoin(MAIN_DOC_URL, "download.html"))
     if response is None:
         return
@@ -107,46 +108,50 @@ def download(session):
     logging.info(f"Архив был загружен и сохранён: {archive_path}")
 
 
-def pep(session):
+def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     response = get_response(session, PEP_URL)
     if response is None:
         return None
-    
-    soup = BeautifulSoup(response.text, features='lxml')
-    pep_table = find_tag(soup, 'section', attrs={'id': 'numerical-index'})
-    pep_table_data = find_tag(pep_table, 'tbody')
-    pep_tags = pep_table_data.find_all('tr')
+
+    soup = BeautifulSoup(response.text, features="lxml")
+    pep_table = find_tag(soup, "section", attrs={"id": "numerical-index"})
+    pep_table_data = find_tag(pep_table, "tbody")
+    pep_tags = pep_table_data.find_all("tr")
 
     errors = []
     pep_list = []
-    result = [('Статус', 'Количество')]
+    statuses = []
+    result = [("Статус", "Количество")]
 
     for pep_tag in tqdm(pep_tags):
-        pep_abbr = find_tag(pep_tag, 'abbr')
-        preview_status = pep_abbr.text[1:]
-        href = find_tag(pep_tag, 'a')['href']
+        preview_status = find_tag(pep_tag, "abbr").text[1:]
+        href = find_tag(pep_tag, "a")["href"]
         pep_link = urljoin(PEP_URL, href)
 
         response = get_response(session, pep_link)
         if response is None:
             continue
 
-        soup = BeautifulSoup(response.text, features='lxml')
-        description = find_tag(
-            soup, 'dl', attrs={'class': 'rfc2822 field-list simple'})
-        
-        td = description.find(string='Status')
+        soup = BeautifulSoup(response.text, features="lxml")
+        description = find_tag(soup, "dl", attrs={"class": "rfc2822 field-list simple"})
+
+        td = description.find(string="Status")
         status = td.find_parent().find_next_sibling().text
         pep_list.append(status)
 
-    statuses = []
+        try:
+            if status not in EXPECTED_STATUS[preview_status]:
+                errors.append((pep_link, preview_status, status))
+        except KeyError:
+            logging.error("Unexpected Status: " f"{preview_status}")
 
     for status_list in EXPECTED_STATUS.values():
         for status in status_list:
             if status not in statuses:
                 statuses.append(status)
                 result.append((status, pep_list.count(status)))
-    result.append(('Total', len(pep_list)))
+
+    result.append(("Total", len(pep_list)))
 
     return result
 
@@ -155,11 +160,11 @@ MODE_TO_FUNCTION = {
     "whats-new": whats_new,
     "latest-versions": latest_versions,
     "download": download,
-    'pep': pep,
+    "pep": pep,
 }
 
 
-def main():
+def main() -> None:
     configure_logging()
     logging.info("Парсер запущен!")
 

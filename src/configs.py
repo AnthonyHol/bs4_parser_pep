@@ -9,6 +9,8 @@ from constants import BASE_DIR, DT_FORMAT, LOG_FORMAT
 def configure_argument_parser(
     available_modes: List[str],
 ) -> argparse.ArgumentParser:
+    """Функция конфигурации аргументов командой строки."""
+
     parser = argparse.ArgumentParser(description="Парсер документации Python")
     parser.add_argument("mode", choices=available_modes, help="Режимы работы парсера")
     parser.add_argument("-c", "--clear-cache", action="store_true", help="Очистка кеша")
@@ -23,6 +25,8 @@ def configure_argument_parser(
 
 
 def configure_logging() -> None:
+    """Функция конфигурации логов."""
+
     log_dir = BASE_DIR / "logs"
     log_dir.mkdir(exist_ok=True)
 

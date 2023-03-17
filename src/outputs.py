@@ -9,6 +9,8 @@ from constants import BASE_DIR, DATETIME_FORMAT
 
 
 def control_output(results: List[Tuple[str]], cli_args) -> None:
+    """Функция определения типа вывода."""
+
     output = cli_args.output
 
     if output == "pretty":
@@ -20,11 +22,15 @@ def control_output(results: List[Tuple[str]], cli_args) -> None:
 
 
 def default_output(results: List[Tuple[str]]) -> None:
+    """Функция стандартного вывода в консоль."""
+
     for row in results:
         print(*row)
 
 
 def pretty_output(results: List[Tuple[str]]) -> None:
+    """Функция табличного вывода в консоль."""
+
     table = PrettyTable()
     table.field_names = results[0]
     table.align = "l"
@@ -34,6 +40,8 @@ def pretty_output(results: List[Tuple[str]]) -> None:
 
 
 def file_output(results: List[Tuple[str]], cli_args) -> None:
+    """Функция вывода результата в CSV-файл."""
+
     results_dir = BASE_DIR / "results"
     results_dir.mkdir(exist_ok=True)
     parser_mode = cli_args.mode

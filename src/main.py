@@ -14,6 +14,8 @@ from utils import find_tag, get_response
 
 
 def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
+    """Функция парсинга раздела 'Whats new'."""
+
     whats_new_url = urljoin(MAIN_DOC_URL, "whatsnew/")
 
     response = get_response(session, whats_new_url)
@@ -49,6 +51,8 @@ def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
 
 def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
+    """Функция парсинга информации о версиях Python."""
+
     response = get_response(session, MAIN_DOC_URL)
     if response is None:
         return
@@ -82,6 +86,7 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
 
 def download(session: requests_cache.CachedSession) -> None:
+    """Функция парсинга документации Python с сохранением в файл."""
     response = get_response(session, urljoin(MAIN_DOC_URL, "download.html"))
     if response is None:
         return
@@ -109,6 +114,7 @@ def download(session: requests_cache.CachedSession) -> None:
 
 
 def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
+    """Функция парсинга раздела PEP, подсчет количество различных статусов PEP."""
     response = get_response(session, PEP_URL)
     if response is None:
         return None
@@ -165,6 +171,7 @@ MODE_TO_FUNCTION = {
 
 
 def main() -> None:
+    """Главная функция."""
     configure_logging()
     logging.info("Парсер запущен!")
 

@@ -28,7 +28,9 @@ def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     div_with_ul = find_tag(main_div, "div", attrs={"class": "toctree-wrapper"})
 
-    sections_by_python = div_with_ul.find_all("li", attrs={"class": "toctree-l1"})
+    sections_by_python = div_with_ul.find_all(
+        "li", attrs={"class": "toctree-l1"}
+    )
 
     results = [("Ссылка на статью", "Заголовок", "Редактор, Автор")]
 
@@ -114,7 +116,8 @@ def download(session: requests_cache.CachedSession) -> None:
 
 
 def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
-    """Функция парсинга раздела PEP, подсчет количество различных статусов PEP."""
+    """Функция парсинга раздела PEP,
+    подсчет количество различных статусов PEP."""
     response = get_response(session, PEP_URL)
     if response is None:
         return None
@@ -139,7 +142,9 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
             continue
 
         soup = BeautifulSoup(response.text, features="lxml")
-        description = find_tag(soup, "dl", attrs={"class": "rfc2822 field-list simple"})
+        description = find_tag(
+            soup, "dl", attrs={"class": "rfc2822 field-list simple"}
+        )
 
         td = description.find(string="Status")
         status = td.find_parent().find_next_sibling().text

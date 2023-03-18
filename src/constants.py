@@ -18,6 +18,18 @@ EXPECTED_STATUS = {
     "": ("Draft", "Active"),
 }
 
+DIV_TAG = "div"
+ID = "id"
+CLASS = "class"
+UL_TAG = "ul"
+A_TAG = "a"
+TABLE_TAG = "table"
+HREF_TAG = "href"
+DL_TAG = "dl"
+H1_TAG = "h1"
+ABBR_TAG = "abbr"
+
+SECTION_TAG = "section"
 
 WHATSNEW_ID = "what-s-new-in-python"
 TOCTREE_CLASS = "toctree-wrapper"

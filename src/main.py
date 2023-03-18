@@ -9,16 +9,27 @@ from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
 from constants import (
+    A_TAG,
+    ABBR_TAG,
     BASE_DIR,
+    CLASS,
+    DIV_TAG,
+    DL_TAG,
     DOWNLOAD_CLASS,
     DOWNLOAD_ROLE,
     EXPECTED_STATUS,
+    H1_TAG,
+    HREF_TAG,
+    ID,
     LATEST_VER_CLASS,
     MAIN_DOC_URL,
     PEP_CLASS,
     PEP_ID,
     PEP_URL,
+    SECTION_TAG,
+    TABLE_TAG,
     TOCTREE_CLASS,
+    UL_TAG,
     WHATSNEW_ID,
 )
 from exceptions import TagNotFoundException
@@ -33,26 +44,25 @@ def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     soup = get_soup(session, whats_new_url)
 
-    main_div = find_tag(soup, "section", attrs={"id": WHATSNEW_ID})
+    main_div = find_tag(soup, SECTION_TAG, attrs={ID: WHATSNEW_ID})
 
-    div_with_ul = find_tag(main_div, "div", attrs={"class": TOCTREE_CLASS})
+    div_with_ul = find_tag(main_div, DIV_TAG, attrs={CLASS: TOCTREE_CLASS})
 
     sections_by_python = div_with_ul.find_all(
-        "li", attrs={"class": "toctree-l1"}
+        "li", attrs={CLASS: "toctree-l1"}
     )
 
     results = [("Ссылка на статью", "Заголовок", "Редактор, Автор")]
 
     for section in tqdm(sections_by_python):
-        version_a_tag = section.find("a")
-        href = version_a_tag["href"]
+        version_a_tag = section.find(A_TAG)
+        href = version_a_tag[HREF_TAG]
         version_link = urljoin(whats_new_url, href)
-        response = session.get(version_link)
-        response.encoding = "utf-8"
-        soup = BeautifulSoup(response.text, "lxml")
 
-        h1 = find_tag(soup, "h1")
-        dl = find_tag(soup, "dl")
+        soup = get_soup(session, version_link)
+
+        h1 = find_tag(soup, H1_TAG)
+        dl = find_tag(soup, DL_TAG)
 
         dl_text = dl.text.replace("\n", " ")
 
@@ -66,12 +76,12 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     soup = get_soup(session, MAIN_DOC_URL)
 
-    sidebar = find_tag(soup, "div", {"class": LATEST_VER_CLASS})
-    ul_tags = sidebar.find_all("ul")
+    sidebar = find_tag(soup, DIV_TAG, {CLASS: LATEST_VER_CLASS})
+    ul_tags = sidebar.find_all(UL_TAG)
 
     for ul in ul_tags:
         if "All versions" in ul.text:
-            a_tags = ul.find_all("a")
+            a_tags = ul.find_all(A_TAG)
             break
         else:
             raise TagNotFoundException
@@ -81,7 +91,7 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     pattern = r"Python (?P<version>\d\.\d+) \((?P<status>.*)\)"
 
     for a_tag in a_tags:
-        link = a_tag["href"]
+        link = a_tag[HREF_TAG]
         text_match = re.search(pattern, a_tag.text)
         version, status = text_match.groups() if text_match else a_tag.text, ""
         results.append((link, version, status))
@@ -97,12 +107,14 @@ def download(session: requests_cache.CachedSession) -> None:
 
     soup = get_soup(session, download_url)
 
-    main_tag = soup.find("div", {"role": DOWNLOAD_ROLE})
-    table_tag = main_tag.find("table", {"class": DOWNLOAD_CLASS})
+    main_tag = soup.find(DIV_TAG, {"role": DOWNLOAD_ROLE})
+    table_tag = main_tag.find(TABLE_TAG, {CLASS: DOWNLOAD_CLASS})
 
-    pdf_a4_tag = table_tag.find("a", {"href": re.compile(r".+pdf-a4\.zip$")})
+    pdf_a4_tag = table_tag.find(
+        A_TAG, {HREF_TAG: re.compile(r".+pdf-a4\.zip$")}
+    )
 
-    pdf_a4_link = pdf_a4_tag["href"]
+    pdf_a4_link = pdf_a4_tag[HREF_TAG]
 
     archive_url = urljoin(MAIN_DOC_URL, pdf_a4_link)
 
@@ -123,7 +135,7 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     soup = get_soup(session, PEP_URL)
 
-    pep_table = find_tag(soup, "section", attrs={"id": PEP_ID})
+    pep_table = find_tag(soup, SECTION_TAG, attrs={ID: PEP_ID})
     pep_table_data = find_tag(pep_table, "tbody")
     pep_tags = pep_table_data.find_all("tr")
 
@@ -133,8 +145,8 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     result = [("Статус", "Количество")]
 
     for pep_tag in tqdm(pep_tags):
-        preview_status = find_tag(pep_tag, "abbr").text[1:]
-        href = find_tag(pep_tag, "a")["href"]
+        preview_status = find_tag(pep_tag, ABBR_TAG).text[1:]
+        href = find_tag(pep_tag, A_TAG)[HREF_TAG]
         pep_link = urljoin(PEP_URL, href)
 
         response = get_response(session, pep_link)
@@ -142,7 +154,8 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
             continue
 
         soup = BeautifulSoup(response.text, features="lxml")
-        description = find_tag(soup, "dl", attrs={"class": PEP_CLASS})
+
+        description = find_tag(soup, DL_TAG, attrs={CLASS: PEP_CLASS})
 
         td = description.find(string="Status")
         status = td.find_parent().find_next_sibling().text

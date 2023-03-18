@@ -8,7 +8,20 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
-from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, PEP_URL
+from constants import (
+    BASE_DIR,
+    DOWNLOAD_CLASS,
+    DOWNLOAD_ROLE,
+    EXPECTED_STATUS,
+    LATEST_VER_CLASS,
+    MAIN_DOC_URL,
+    PEP_CLASS,
+    PEP_ID,
+    PEP_URL,
+    TOCTREE_CLASS,
+    WHATSNEW_ID,
+)
+from exceptions import TagNotFoundException
 from outputs import control_output
 from utils import find_tag, get_response, get_soup
 
@@ -20,11 +33,13 @@ def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     soup = get_soup(session, whats_new_url)
 
-    main_div = find_tag(soup, "section", attrs={"id": "what-s-new-in-python"})
+    main_div = find_tag(soup, "section", attrs={"id": WHATSNEW_ID})
 
-    div_with_ul = find_tag(main_div, "div", attrs={"class": "toctree-wrapper"})
+    div_with_ul = find_tag(main_div, "div", attrs={"class": TOCTREE_CLASS})
 
-    sections_by_python = div_with_ul.find_all("li", attrs={"class": "toctree-l1"})
+    sections_by_python = div_with_ul.find_all(
+        "li", attrs={"class": "toctree-l1"}
+    )
 
     results = [("Ссылка на статью", "Заголовок", "Редактор, Автор")]
 
@@ -51,7 +66,7 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     soup = get_soup(session, MAIN_DOC_URL)
 
-    sidebar = find_tag(soup, "div", {"class": "sphinxsidebarwrapper"})
+    sidebar = find_tag(soup, "div", {"class": LATEST_VER_CLASS})
     ul_tags = sidebar.find_all("ul")
 
     for ul in ul_tags:
@@ -59,7 +74,7 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
             a_tags = ul.find_all("a")
             break
         else:
-            raise Exception("Ничего не нашлось")
+            raise TagNotFoundException
 
     results = [("Ссылка на документацию", "Версия", "Статус")]
 
@@ -68,10 +83,7 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     for a_tag in a_tags:
         link = a_tag["href"]
         text_match = re.search(pattern, a_tag.text)
-        if text_match is not None:
-            version, status = text_match.groups()
-        else:
-            version, status = a_tag.text, ""
+        version, status = text_match.groups() if text_match else a_tag.text, ""
         results.append((link, version, status))
 
     return results
@@ -85,8 +97,8 @@ def download(session: requests_cache.CachedSession) -> None:
 
     soup = get_soup(session, download_url)
 
-    main_tag = soup.find("div", {"role": "main"})
-    table_tag = main_tag.find("table", {"class": "docutils"})
+    main_tag = soup.find("div", {"role": DOWNLOAD_ROLE})
+    table_tag = main_tag.find("table", {"class": DOWNLOAD_CLASS})
 
     pdf_a4_tag = table_tag.find("a", {"href": re.compile(r".+pdf-a4\.zip$")})
 
@@ -111,7 +123,7 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     soup = get_soup(session, PEP_URL)
 
-    pep_table = find_tag(soup, "section", attrs={"id": "numerical-index"})
+    pep_table = find_tag(soup, "section", attrs={"id": PEP_ID})
     pep_table_data = find_tag(pep_table, "tbody")
     pep_tags = pep_table_data.find_all("tr")
 
@@ -130,7 +142,7 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
             continue
 
         soup = BeautifulSoup(response.text, features="lxml")
-        description = find_tag(soup, "dl", attrs={"class": "rfc2822 field-list simple"})
+        description = find_tag(soup, "dl", attrs={"class": PEP_CLASS})
 
         td = description.find(string="Status")
         status = td.find_parent().find_next_sibling().text

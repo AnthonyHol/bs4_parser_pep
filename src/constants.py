@@ -17,3 +17,12 @@ EXPECTED_STATUS = {
     "W": ("Withdrawn",),
     "": ("Draft", "Active"),
 }
+
+
+WHATSNEW_ID = "what-s-new-in-python"
+TOCTREE_CLASS = "toctree-wrapper"
+LATEST_VER_CLASS = "sphinxsidebarwrapper"
+DOWNLOAD_CLASS = "docutils"
+DOWNLOAD_ROLE = "main"
+PEP_ID = "numerical-index"
+PEP_CLASS = "rfc2822 field-list simple"

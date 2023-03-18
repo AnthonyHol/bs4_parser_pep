@@ -1,5 +1,6 @@
 import logging
 
+from bs4 import BeautifulSoup
 from requests import RequestException
 
 from exceptions import ParserFindTagException
@@ -15,6 +16,17 @@ def get_response(session, url):
         logging.exception(
             f"Возникла ошибка при загрузке страницы {url}", stack_info=True
         )
+
+
+def get_soup(session, url) -> BeautifulSoup:
+    """Функция получения SOUP."""
+    response = get_response(session, url)
+    if response is None:
+        return
+
+    soup = BeautifulSoup(response.text, features="lxml")
+
+    return soup
 
 
 def find_tag(soup, tag, attrs=None):

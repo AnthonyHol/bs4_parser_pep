@@ -10,7 +10,7 @@ from tqdm import tqdm
 from configs import configure_argument_parser, configure_logging
 from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, PEP_URL
 from outputs import control_output
-from utils import find_tag, get_response
+from utils import find_tag, get_response, get_soup
 
 
 def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
@@ -18,19 +18,13 @@ def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
     whats_new_url = urljoin(MAIN_DOC_URL, "whatsnew/")
 
-    response = get_response(session, whats_new_url)
-    if response is None:
-        return
-
-    soup = BeautifulSoup(response.text, features="lxml")
+    soup = get_soup(session, whats_new_url)
 
     main_div = find_tag(soup, "section", attrs={"id": "what-s-new-in-python"})
 
     div_with_ul = find_tag(main_div, "div", attrs={"class": "toctree-wrapper"})
 
-    sections_by_python = div_with_ul.find_all(
-        "li", attrs={"class": "toctree-l1"}
-    )
+    sections_by_python = div_with_ul.find_all("li", attrs={"class": "toctree-l1"})
 
     results = [("Ссылка на статью", "Заголовок", "Редактор, Автор")]
 
@@ -55,11 +49,7 @@ def whats_new(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     """Функция парсинга информации о версиях Python."""
 
-    response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
-
-    soup = BeautifulSoup(response.text, "lxml")
+    soup = get_soup(session, MAIN_DOC_URL)
 
     sidebar = find_tag(soup, "div", {"class": "sphinxsidebarwrapper"})
     ul_tags = sidebar.find_all("ul")
@@ -89,11 +79,11 @@ def latest_versions(session: requests_cache.CachedSession) -> List[Tuple[str]]:
 
 def download(session: requests_cache.CachedSession) -> None:
     """Функция парсинга документации Python с сохранением в файл."""
-    response = get_response(session, urljoin(MAIN_DOC_URL, "download.html"))
-    if response is None:
-        return
+    download_url = urljoin(MAIN_DOC_URL, "download.html")
 
-    soup = BeautifulSoup(response.text, "lxml")
+    response = get_response(session, download_url)
+
+    soup = get_soup(session, download_url)
 
     main_tag = soup.find("div", {"role": "main"})
     table_tag = main_tag.find("table", {"class": "docutils"})
@@ -118,11 +108,9 @@ def download(session: requests_cache.CachedSession) -> None:
 def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
     """Функция парсинга раздела PEP,
     подсчет количество различных статусов PEP."""
-    response = get_response(session, PEP_URL)
-    if response is None:
-        return None
 
-    soup = BeautifulSoup(response.text, features="lxml")
+    soup = get_soup(session, PEP_URL)
+
     pep_table = find_tag(soup, "section", attrs={"id": "numerical-index"})
     pep_table_data = find_tag(pep_table, "tbody")
     pep_tags = pep_table_data.find_all("tr")
@@ -142,9 +130,7 @@ def pep(session: requests_cache.CachedSession) -> List[Tuple[str]]:
             continue
 
         soup = BeautifulSoup(response.text, features="lxml")
-        description = find_tag(
-            soup, "dl", attrs={"class": "rfc2822 field-list simple"}
-        )
+        description = find_tag(soup, "dl", attrs={"class": "rfc2822 field-list simple"})
 
         td = description.find(string="Status")
         status = td.find_parent().find_next_sibling().text
